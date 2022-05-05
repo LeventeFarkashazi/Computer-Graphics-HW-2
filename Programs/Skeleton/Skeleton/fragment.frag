@@ -56,9 +56,9 @@ float intersectParaboloid(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius
     float t2 = (-b + sqrt(disc)) / (2 * a);
     vec3 hitPos1 = rayOrigin + rayDir * t1;
     vec3 hitPos2 = rayOrigin + rayDir * t2;
-    if (hitPos1.y < center.y || hitPos1.y > height + center.y)
+    if (hitPos1.y > height + center.y)
         t1 = -1.0;
-    if (hitPos2.y < center.y || hitPos2.y > height + center.y)
+    if (hitPos2.y > height + center.y)
         t2 = -1.0;
     
     float t;
@@ -82,7 +82,7 @@ float intersectParaboloid(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius
     }
     
     normal = hitPos - center;
-    normal.y = 0.0;
+    //normal.y = 0.0;
     normal = normalize(normal);
         
     return t;
@@ -126,8 +126,7 @@ float intersectCylinder(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius, 
         }
     }
     
-    normal = hitPos - center;
-    normal.y = 0.0;
+    normal = cross(vec3(1, 2 * hitPos.x, 0),vec3(0, 2 * hitPos.z ,1));
     normal = normalize(normal);
         
     return t;
@@ -197,7 +196,7 @@ float intersectWorld(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
     sphereJoint2Normal = quatRot(quatInv(q), sphereJoint2Normal);
 
     //rotate the second rod 
-    vec4 q2 = quat(normalize(vec3(2, 3, 4)), time);
+    vec4 q2 = quat(normalize(vec3(2, 3, 4)), time + 1.5);
     vec3 rotOrigin2 = quatRot(q2, rotOrigin1 + vec3(0,-2.0,0));
     vec3 rotRayDir2 = quatRot(q2, rotRayDir1);
 
@@ -213,13 +212,17 @@ float intersectWorld(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
 
 
     //rotate the lamp shade 
-
-    vec4 q3 = quat(normalize(vec3(1, 4, 1)), time);
+    vec4 q3 = quat(normalize(vec3(4, 1, 1)), 7.5);
     vec3 rotOrigin3 = quatRot(q3, rotOrigin2 + vec3(0,-2.0,0));
     vec3 rotRayDir3 = quatRot(q3, rotRayDir2);
 
+    vec4 q4 = quat(normalize(vec3(1, 4, 1)), time);
+    vec3 rotOrigin4 = quatRot(q4, rotOrigin3);
+    vec3 rotRayDir4 = quatRot(q4, rotRayDir3);
+
     vec3 lampShadeNormal;
-    float tLampShade = intersectParaboloid(rotOrigin3, rotRayDir3, vec3(0, 0, 0), 0.2, 1.0, lampShadeNormal);
+    float tLampShade = intersectParaboloid(rotOrigin4, rotRayDir4, vec3(0, 0, 0), 0.2, 1.0, lampShadeNormal);
+    lampShadeNormal = quatRot(quatInv(q4), lampShadeNormal);
     lampShadeNormal = quatRot(quatInv(q3), lampShadeNormal);
     lampShadeNormal = quatRot(quatInv(q2), lampShadeNormal);
     lampShadeNormal = quatRot(quatInv(q), lampShadeNormal);
@@ -238,7 +241,7 @@ float intersectWorld(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
 
 void main() {
     float time = frame / 60.0;
-    vec3 lightPos = vec3(cos(time) * 5.0, 5, sin(time) * 5.0);
+    vec3 lightPos = vec3(0,10,0);
     
     float fov = PI / 2;
     
