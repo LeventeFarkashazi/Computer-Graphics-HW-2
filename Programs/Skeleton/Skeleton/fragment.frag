@@ -13,13 +13,13 @@ vec4 quat(vec3 axis, float angle) {
 }
 
 vec4 quatInv(vec4 q) {
-    return vec4(-q.xyz, q.w);
+    return vec4(-q.x,-q.y, -q.z, q.w);
 }
 
 vec4 quatMul(vec4 q1, vec4 q2) {
     return vec4(
-        q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz),
-        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+        q1.w * vec3(q2.x, q2.y, q2.z) + q2.w * vec3(q1.x, q1.y, q1.z) + cross(vec3(q1.x, q1.y, q1.z), vec3(q2.x, q2.y, q2.z)),
+        q1.w * q2.w - dot(vec3(q1.x, q1.y, q1.z), vec3(q2.x, q2.y, q2.z))
     );
 }
 
@@ -28,8 +28,8 @@ vec3 quatRot(vec4 q, vec3 p) {
     return quatMul(quatMul(q, vec4(p, 0)), qInv).xyz;
 }
 
-float intersectSphere(vec3 origin, vec3 rayDir, vec3 center, float radius, out vec3 normal) {
-    vec3 oc = origin - center;
+float intersectSphere(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius, out vec3 normal) {
+    vec3 oc = rayOrigin - center;
     float a = dot(rayDir, rayDir);
     float b = 2.0 * dot(oc, rayDir);
     float c = dot(oc, oc) - radius * radius;
@@ -38,14 +38,14 @@ float intersectSphere(vec3 origin, vec3 rayDir, vec3 center, float radius, out v
         return -1.0;
     }
     float t = (-b - sqrt(disc)) / (2 * a);
-    vec3 hitPos = origin + rayDir * t;
+    vec3 hitPos = rayOrigin + rayDir * t;
     
     normal = normalize(hitPos - center);
     return t;
 }
 
-float intersectCylinder(vec3 origin, vec3 rayDir, vec3 center, float radius, float height, out vec3 normal) {
-    vec2 oc = origin.xz - center.xz;
+float intersectCylinder(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius, float height, out vec3 normal) {
+    vec2 oc = rayOrigin.xz - center.xz;
     float a = dot(rayDir.xz, rayDir.xz);
     float b = 2.0 * dot(oc, rayDir.xz);
     float c = dot(oc, oc) - radius * radius;
@@ -55,8 +55,8 @@ float intersectCylinder(vec3 origin, vec3 rayDir, vec3 center, float radius, flo
     }
     float t1 = (-b - sqrt(disc)) / (2 * a);
     float t2 = (-b + sqrt(disc)) / (2 * a);
-    vec3 hitPos1 = origin + rayDir * t1;
-    vec3 hitPos2 = origin + rayDir * t2;
+    vec3 hitPos1 = rayOrigin + rayDir * t1;
+    vec3 hitPos2 = rayOrigin + rayDir * t2;
     if (hitPos1.y < center.y || hitPos1.y > height + center.y)
         t1 = -1.0;
     if (hitPos2.y < center.y || hitPos2.y > height + center.y)
@@ -89,8 +89,8 @@ float intersectCylinder(vec3 origin, vec3 rayDir, vec3 center, float radius, flo
     return t;
 }
 
-float intersectPlane(vec3 origin, vec3 rayDir, vec3 point, vec3 normal) {
-    return dot(point - origin, normal) / dot(rayDir, normal);
+float intersectPlane(vec3 rayOrigin, vec3 rayDir, vec3 point, vec3 normal) {
+    return dot(point - rayOrigin, normal) / dot(rayDir, normal);
 }
 
 float combine(float t1, float t2, vec3 normal1, vec3 normal2, out vec3 normal) {
@@ -114,17 +114,17 @@ float combine(float t1, float t2, vec3 normal1, vec3 normal2, out vec3 normal) {
     }
 } 
 
-float intersectWorld(vec3 origin, vec3 rayDir, out vec3 normal) {
+float intersectWorld(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
     float time = frame / 60.0;
     vec3 cylNormal;
     vec3 sphNormal;
     
-    float tSph = intersectSphere(origin, rayDir, vec3(0, 0, 0), 0.5, sphNormal);
+    float tSph = intersectSphere(rayOrigin, rayDir, vec3(0, 0, 0), 0.5, sphNormal);
     vec3 planeNormal = vec3(0, 1, 0);
-    float tPlane = intersectPlane(origin, rayDir, vec3(0, -2, 0), planeNormal);
+    float tPlane = intersectPlane(rayOrigin, rayDir, vec3(0, -2, 0), planeNormal);
     
     vec4 q = quat(normalize(vec3(1, 3, 2)), time);
-    vec3 rotOrigin = quatRot(q, origin);
+    vec3 rotOrigin = quatRot(q, rayOrigin);
     vec3 rotRayDir = quatRot(q, rayDir);
     float tCyl = intersectCylinder(rotOrigin, rotRayDir, vec3(0, 0, 0), 0.4, 2.0, cylNormal);
     cylNormal = quatRot(quatInv(q), cylNormal);
@@ -145,18 +145,18 @@ void main() {
     
     float fov = PI / 2;
     
-    vec3 origin = vec3(0, 2.5, 5);
+    vec3 rayOrigin = vec3(0, 2.5, 5); //~ cam pos
     vec3 rayDir = normalize(vec3(texCoord * 2 - 1, -tan(fov / 2.0)));
     //rayDir = (vec4(rayDir, 0) * viewMat).xyz;
     
     vec3 normal;
-    float t = intersectWorld(origin, rayDir, normal);
+    float t = intersectWorld(rayOrigin, rayDir, normal);
     
     if (dot(normal, rayDir) > 0.0) {
         normal *= -1;
     }
     
-    vec3 hitPos = origin + rayDir * t;
+    vec3 hitPos = rayOrigin + rayDir * t;
     vec3 toLight = lightPos - hitPos;
     float distToLight = length(toLight);
     toLight /= distToLight;
