@@ -131,62 +131,27 @@ void onDisplay() {
   // VEGE
 
   gpuProgram.setUniform((float)frame, "frame");
+  gpuProgram.setUniform((mat4)RotationMatrix(-1.0f, vec3(1,0,0)), "camDirMat");
   frame++;
 
   glBindVertexArray(vao);                 // Draw call
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);  //???
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); 
 
   glutSwapBuffers();  // exchange buffers for double buffering
   glutPostRedisplay();
 }
 
 // Key of ASCII code pressed
-void onKeyboard(unsigned char key, int pX, int pY) {
-  if (key == 'd') glutPostRedisplay();  // if d, invalidate display, i.e. redraw
-}
+void onKeyboard(unsigned char key, int pX, int pY) {}
 
 // Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) {}
 
 // Move mouse with key pressed
-void onMouseMotion(
-    int pX, int pY) {  // pX, pY are the pixel coordinates of the cursor in the
-                       // coordinate system of the operation system
-  // Convert to normalized device space
-  float cX = 2.0f * pX / windowWidth - 1;  // flip y axis
-  float cY = 1.0f - 2.0f * pY / windowHeight;
-  printf("Mouse moved to (%3.2f, %3.2f)\n", cX, cY);
-}
+void onMouseMotion(int pX, int pY) {}
 
 // Mouse click event
-void onMouse(int button, int state, int pX,
-             int pY) {  // pX, pY are the pixel coordinates of the cursor in the
-                        // coordinate system of the operation system
-  // Convert to normalized device space
-  float cX = 2.0f * pX / windowWidth - 1;  // flip y axis
-  float cY = 1.0f - 2.0f * pY / windowHeight;
-
-  char *buttonStat;
-  switch (state) {
-    case GLUT_DOWN:
-      buttonStat = "pressed";
-      break;
-    case GLUT_UP:
-      buttonStat = "released";
-      break;
-  }
-
-  switch (button) {
-    case GLUT_LEFT_BUTTON:
-      printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);
-      break;
-    case GLUT_MIDDLE_BUTTON:
-      printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);
-      break;
-    case GLUT_RIGHT_BUTTON:
-      printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);
-      break;
-  }
+void onMouse(int button, int state, int pX, int pY) {
 }
 
 // Idle event indicating that some time elapsed: do animation here

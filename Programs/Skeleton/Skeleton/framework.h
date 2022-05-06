@@ -297,6 +297,7 @@ public:
 		        const char * const geometryShaderSource = nullptr)
 	{
 		// Create vertex shader from string
+
 		if (vertexShader == 0) vertexShader = glCreateShader(GL_VERTEX_SHADER);
 		if (!vertexShader) {
 			printf("Error in vertex shader creation\n");
