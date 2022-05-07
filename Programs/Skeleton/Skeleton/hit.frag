@@ -275,11 +275,16 @@ Hit intersectAll(Ray ray) {
     hit = merge(hit, sphereJoint3);
     hit = merge(hit, lampShade);
 
-    //movingLightPos = vec3(0, 10, 0);
+    
     movingLightPos = vec3(0, 0.2, 0);
-    movingLightPos += quatRot(quatInv(q), vec3(0,3.3,0));
-
-    //movingLightPos += vec3(0, 0.3, 0);
+    movingLightPos += quatRot(quatInv(q), vec3(0,3,0));
+    movingLightPos += quatRot(quatMul(quatInv(q), quatInv(q2)), vec3(0,2,0));
+    movingLightPos += quatRot(quatMul(quatMul(quatInv(q), quatInv(q2)),quatInv(q3)) ,vec3(0,0,0));
+    movingLightPos += quatRot(quatMul(quatMul(quatMul(quatInv(q), quatInv(q2)),quatInv(q3)),quatInv(q4)) ,vec3(0,0.25,0));
+    
+    
+    if (dot(ray.dir, hit.normal) > 0) hit.normal = hit.normal * (-1);
+    
     return hit;
 }
 
@@ -304,10 +309,6 @@ void main() {
     
     //vec3 lightPos1 = vec3(10,15,10);
     //vec3 lightPos2 = movingLightPos;
-
-    if (dot(hit.normal, ray.dir) > 0.0) {
-        hit.normal *= -1;
-    }
     
     Ray ray1;
     Ray ray2;
@@ -332,22 +333,22 @@ void main() {
         ray2.start = hit.position + hit.normal * epsilon;
 
 
-        Hit light1 = intersectAll(ray1);
-        Hit light2 = intersectAll(ray2);
+        Hit lightHit1 = intersectAll(ray1);
+        Hit lightHit2 = intersectAll(ray2);
 
         float lightIntensity = 100.0;
-        float lightIntensity2 = 50.0;
+        float lightIntensity2 = 1000.0;
 
-        if (light1.t > 0.0) {
+        if (lightHit1.t > 0.0 && lightHit1.t < lightDistance1) {
             lightIntensity = 0.0;
         }
         
-        if (light2.t > 0.0) {
+        if (lightHit2.t > 0.0 && lightHit2.t < lightDistance2) {
             lightIntensity2 = 0.0;
         }
         
         fragColor = vec4(vec3(50 / 255.0, 48 / 255.0, 40 / 255.0), 1)
-        + vec4(vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta1 / pow(lightDistance1, 2.0) * lightIntensity, 1) + vec4(vec3(253 / 255.0, 100 / 255.0, 100 / 255.0) * cosTheta2 / pow(lightDistance2, 2.0) * lightIntensity2, 1);
+        + vec4(vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta1 / pow(lightDistance1, 2.0) * lightIntensity, 1) + vec4(vec3(248 / 255.0, 235 / 255.0, 100 / 255.0) * cosTheta2 / pow(lightDistance2, 2.0) * lightIntensity2, 1);
     } else {
         fragColor = vec4(0 / 255.0, 0 / 255.0, 0 / 255.0, 1);
     }

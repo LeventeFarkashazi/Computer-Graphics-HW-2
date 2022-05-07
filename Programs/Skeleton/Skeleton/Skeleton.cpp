@@ -119,7 +119,7 @@ void onDisplay() {
     newVertexSrc += line + "\n";
   }
   vfile.close();
-  std::ifstream ffile("D:\\Users\\Lecso\\Documents\\GitHub\\grafikaHF2\\Programs\\Skeleton\\Skeleton\\hit.frag");
+  std::ifstream ffile("D:\\Users\\Lecso\\Documents\\GitHub\\grafikaHF2\\Programs\\Skeleton\\Skeleton\\textures.frag");
   while (std::getline(ffile, line)) {
     newFragmentSrc += line + "\n";
   }
@@ -138,7 +138,6 @@ void onDisplay() {
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); 
 
   glutSwapBuffers();  // exchange buffers for double buffering
-  glutPostRedisplay();
 }
 
 // Key of ASCII code pressed
@@ -158,4 +157,5 @@ void onMouse(int button, int state, int pX, int pY) {
 void onIdle() {
   long time = glutGet(
       GLUT_ELAPSED_TIME);  // elapsed time since the start of the program
+  glutPostRedisplay();
 }

@@ -7,7 +7,7 @@ struct Material {
 
 struct Light {
 	vec3 direction;
-	vec3 Le, La;
+	vec3 Le;
 };
 
 struct Hit {
@@ -205,16 +205,16 @@ Hit intersectAll(Ray ray) {
     float time = frame / 100.0;
 
     Material material1;
-    material1.kd = vec3(0.3, 0.2, 0.1);
-    material1.ka = vec3(0.3, 0.2, 0.1) * PI; 
-    material1.ks = vec3(10, 10, 10);
-	material1.shininess = 50;
+    material1.kd = vec3(77 / 255.0, 13 / 255.0, 13 / 255.0) * 0.5;
+    material1.ka = material1.kd * PI; 
+    material1.ks = vec3(2, 2, 2);
+	material1.shininess = 1000000000;
 
     Material material2;
-    material2.kd = vec3(5 / 255.0, 5 / 255.0, 100 / 255.0);
-    material2.ka = vec3(0.3, 0.2, 0.1) * PI; 
-    material2.ks = vec3(5, 5, 5);
-	material2.shininess = 50;
+    material2.kd = vec3(5 / 255.0, 5 / 255.0, 100 / 255.0) * 0.3;
+    material2.ka = material2.kd * PI; 
+    material2.ks = vec3(2, 2, 2);
+	material2.shininess = 500;
 
     Hit ground = intersectPlane(vec3(0, 0, 0), vec3(0, 1, 0), ray);
     ground.mat = material1;
@@ -244,7 +244,7 @@ Hit intersectAll(Ray ray) {
     sphereJoint2.normal = quatRot(quatInv(q), sphereJoint2.normal);
 
     //rotate the second rod 
-    vec4 q2 = quat(normalize(vec3(2, 3, 4)), time + 1.5);
+    vec4 q2 = quat(normalize(vec3(2, 3, 4)), -time + 1.5);
     Ray ray2;
     ray2.start = quatRot(q2, ray1.start + vec3(0,-3.0,0));
     ray2.dir  = quatRot(q2, ray1.dir);
@@ -267,12 +267,12 @@ Hit intersectAll(Ray ray) {
     ray3.start = quatRot(q3, ray2.start + vec3(0,-2.0,0));
     ray3.dir = quatRot(q3, ray2.dir);
 
-    vec4 q4 = quat(normalize(vec3(1, 4, 1)), time);
+    vec4 q4 = quat(normalize(vec3(1, 4, 1)), 0.5*time);
     Ray ray4;
     ray4.start = quatRot(q4, ray3.start);
     ray4.dir = quatRot(q4, ray3.dir);
 
-    Hit lampShade = intersectParaboloid(vec3(0, 0, 0), 0.8, 1.0, ray4);
+    Hit lampShade = intersectParaboloid(vec3(0, 0, 0), 0.9, 1.0, ray4);
     lampShade.mat = material2;
     lampShade.normal = quatRot(quatInv(q4), lampShade.normal);
     lampShade.normal = quatRot(quatInv(q3), lampShade.normal);
@@ -290,27 +290,24 @@ Hit intersectAll(Ray ray) {
     hit = merge(hit, sphereJoint3);
     hit = merge(hit, lampShade);
 
-    //movingLightPos = vec3(0, 10, 0);
     movingLightPos = vec3(0, 0.2, 0);
     movingLightPos += quatRot(quatInv(q), vec3(0,3,0));
+    movingLightPos += quatRot(quatMul(quatInv(q), quatInv(q2)), vec3(0,2,0));
+    movingLightPos += quatRot(quatMul(quatMul(quatInv(q), quatInv(q2)),quatInv(q3)) ,vec3(0,0,0));
+    movingLightPos += quatRot(quatMul(quatMul(quatMul(quatInv(q), quatInv(q2)),quatInv(q3)),quatInv(q4)) ,vec3(0,0.25,0));
+    
+    if (dot(ray.dir, hit.normal) > 0) hit.normal = hit.normal * (-1);
 
-    //movingLightPos += vec3(0, 0.3, 0);
     return hit;
 }
 
-bool shadowIntersect(Ray ray) {	// for directional lights
-		if (intersectAll(ray).t > 0) return true; //  hit.t < 0 if no intersection
-		return false;
-}
+vec3 La = vec3(50 / 255.0, 48 / 255.0, 40 / 255.0);
 
 void main() {
     Light light1;
+    light1.Le = vec3(2, 2, 2);
     Light light2;
-
-    light1.Le = vec3(3, 3, 3);
-    light2.Le = vec3(3, 3, 3);
-    light1.La = vec3(0.4, 0.3, 0.3);
-    light2.La = vec3(0.4, 0.3, 0.3);
+    light2.Le = vec3(2, 2, 2);
 
     float time = frame / 100.0;
     float fov = PI / 2;
@@ -324,88 +321,63 @@ void main() {
     hit.position = ray.start + ray.dir * hit.t;
 
 
-    light1.direction = vec3(10,15,10);
+    light1.direction = vec3(15,15,10);
     light2.direction = movingLightPos;
-
-    if (dot(hit.normal, ray.dir) > 0.0) {
-        hit.normal *= -1;
-    }
     
     Ray ray1;
     Ray ray2;
-    ray1.dir = light1.direction - hit.position;
-    ray2.dir = light2.direction - hit.position;
 
-    float lightDistance1 = length(ray1.dir);
-    float lightDistance2 = length(ray2.dir);
+    float lightDistance1 = length(light1.direction - hit.position);
+    float lightDistance2 = length(light2.direction - hit.position);
     
-    ray1.dir /= lightDistance1;
-    ray2.dir /= lightDistance2;
+    ray1.dir = normalize(light1.direction - hit.position);
+    ray2.dir = normalize(light2.direction - hit.position);
     
     if (hit.t > 0.0) {
+        float cosTheta1 = max(dot(ray1.dir, hit.normal), 0.0);
+        float cosTheta2 = max(dot(ray2.dir, hit.normal), 0.0);
+
         const float epsilon = 0.0001;
         
         ray1.start = hit.position + hit.normal * epsilon;
-  
         ray2.start = hit.position + hit.normal * epsilon;
-
 
         Hit lightHit1 = intersectAll(ray1);
         Hit lightHit2 = intersectAll(ray2);
 
-        float lightIntensity = 50.0;
-        float lightIntensity2 = 30.0;
+        float lightIntensity1 = 10.0;
+        float lightIntensity2 = 40.0;
 
-        if (lightHit1.t > 0.0) {
-            lightIntensity = 0.0;
+        if (lightHit1.t > 0.0 && lightHit1.t < lightDistance1) {
+            lightIntensity1 = 0.0;
         }
         
-        if (lightHit2.t > 0.0) {
+        if (lightHit2.t > 0.0 && lightHit2.t < lightDistance2) {
             lightIntensity2 = 0.0;
         }
         
-        vec3 weight = vec3(1, 1, 1);
-        vec3 outRadiance = vec3(0, 0, 0);
+        vec3 halfway = normalize(-ray1.dir + light1.direction);
+		float cosDelta = dot(hit.normal, halfway);
+
+        vec3 outRadiance = vec3(0,0,0);
+        outRadiance += hit.mat.ka * La * 0.1;
+        outRadiance += vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta1 / pow(lightDistance1, 2.0) * lightIntensity1; 
+        outRadiance += vec3(248 / 255.0, 235 / 255.0, 100 / 255.0) * cosTheta2 / pow(lightDistance2, 2.0) * lightIntensity2;
         
-        //outRadiance += weight * hit.mat.ka * light1.La;
-		Ray shadowRay1;
+        outRadiance += light1.Le * hit.mat.kd * cosTheta1;
+        vec3 halfway1 = normalize(-ray1.dir + light1.direction);
+		float cosDelta1 = dot(hit.normal, halfway1);
+        outRadiance += light1.Le * hit.mat.ks * pow(cosDelta1, hit.mat.shininess);
 
-		shadowRay1.start = hit.position + hit.normal * epsilon;
-		shadowRay1.dir = light1.direction;
-		float cosTheta1 = dot(hit.normal, light1.direction);
-		if (cosTheta1 > 0 && !shadowIntersect(shadowRay1)) {
-            outRadiance += weight * light1.Le * hit.mat.kd * cosTheta1;
-            vec3 halfway1 = normalize(-ray.dir + light1.direction);
-            float cosDelta1 = dot(hit.normal, halfway1);
-            if (cosDelta1 > 0){
-                outRadiance += weight * light1.Le * hit.mat.ks * pow(cosDelta1, hit.mat.shininess);
-            }
-        }
-
-        //outRadiance += weight * hit.mat.ka * light2.La;	
-        Ray shadowRay2;
-
-        shadowRay2.start = hit.position + hit.normal * epsilon;
-		shadowRay2.dir = light1.direction;
-        float cosTheta2 = dot(hit.normal, light1.direction);
-		if (cosTheta2 > 0 && !shadowIntersect(shadowRay1)) {
-            outRadiance += weight * light2.Le * hit.mat.kd * cosTheta2;
-            vec3 halfway2 = normalize(-ray.dir + light2.direction);
-            float cosDelta2 = dot(hit.normal, halfway2);
-            if (cosDelta2 > 0){
-                outRadiance += weight * light2.Le * hit.mat.ks * pow(cosDelta2, hit.mat.shininess);
-            }
-        }
+        outRadiance += light2.Le * hit.mat.kd * cosTheta2;
+        vec3 halfway2 = normalize(-ray2.dir + light2.direction);
+		float cosDelta2 = dot(hit.normal, halfway2);
+        outRadiance += light2.Le * hit.mat.ks * pow(cosDelta2, hit.mat.shininess);
+        
         fragColor = vec4(outRadiance, 1);
-        // fragColor = vec4(vec3(50 / 255.0, 48 / 255.0, 40 / 255.0), 1)
-        // + vec4(vec3(253 / 255.0, 100 / 255.0, 100 / 255.0) * cosTheta2 / pow(lightDistance2, 2.0) * lightIntensity2, 1);
-    
     } else {
         fragColor = vec4(0 / 255.0, 0 / 255.0, 0 / 255.0, 1);
     }
 }
 
 
-				
-
-//vec4(vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta1 / pow(lightDistance1, 2.0) * lightIntensity, 1) + 
