@@ -119,7 +119,7 @@ void onDisplay() {
     newVertexSrc += line + "\n";
   }
   vfile.close();
-  std::ifstream ffile("D:\\Users\\Lecso\\Documents\\GitHub\\grafikaHF2\\Programs\\Skeleton\\Skeleton\\fragment.frag");
+  std::ifstream ffile("D:\\Users\\Lecso\\Documents\\GitHub\\grafikaHF2\\Programs\\Skeleton\\Skeleton\\hit.frag");
   while (std::getline(ffile, line)) {
     newFragmentSrc += line + "\n";
   }
@@ -131,7 +131,7 @@ void onDisplay() {
   // VEGE
 
   gpuProgram.setUniform((float)frame, "frame");
-  gpuProgram.setUniform((mat4)RotationMatrix(-1.0f, vec3(1,0,0)), "camDirMat");
+  gpuProgram.setUniform((mat4)RotationMatrix(-0.9f, vec3(1,0,0)), "camDirMat");
   frame++;
 
   glBindVertexArray(vao);                 // Draw call

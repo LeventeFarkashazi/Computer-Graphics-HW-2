@@ -8,6 +8,29 @@ uniform mat4 camDirMat;
 
 out vec4 fragColor;
 
+vec3 movingLightPos;
+
+struct Material {
+		vec3 ka, kd, ks;
+		float  shininess;
+		vec3 F0;
+		int rough, reflective;
+	};
+
+struct Light {
+	vec3 direction;
+	vec3 Le, La;
+};
+
+struct Hit {
+	float t;
+	vec3 position, normal;
+	int mat;	// material index
+};
+
+struct Ray {
+	vec3 start, dir;
+};
 
 vec4 quat(vec3 rotAxis, float rotAangle) {
     vec4 q;
@@ -38,6 +61,7 @@ vec3 quatRot(vec4 q, vec3 position) {
   q = quatMul(tmp, qInv);
   return vec3(q.x, q.y, q.z);
 }
+
 
 float intersectSphere(vec3 rayOrigin, vec3 rayDir, vec3 center, float radius, out vec3 normal) {
     vec3 dist = rayOrigin - center;
@@ -175,7 +199,7 @@ float merge(float t1, float t2, vec3 normal1, vec3 normal2, out vec3 normal) {
 } 
 
 float intersectAll(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
-    float time = frame / 60.0;
+    float time = frame / 100.0;
     vec3 baseNormal;
     vec3 baseTopNormal = vec3(0, 1, 0);
     vec3 rod1Normal;
@@ -217,7 +241,6 @@ float intersectAll(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
     sphereJoint3Normal = quatRot(quatInv(q2), sphereJoint3Normal);
     sphereJoint3Normal = quatRot(quatInv(q), sphereJoint3Normal);
 
-
     //rotate the lamp shade 
     vec4 q3 = quat(normalize(vec3(4, 1, 1)), 7.5);
     vec3 rotOrigin3 = quatRot(q3, rotOrigin2 + vec3(0,-2.0,0));
@@ -234,6 +257,7 @@ float intersectAll(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
     lampShadeNormal = quatRot(quatInv(q2), lampShadeNormal);
     lampShadeNormal = quatRot(quatInv(q), lampShadeNormal);
 
+    
     float t;
     t = merge(tGround, tBase, groundNormal, baseNormal, normal);
     t = merge(t, tBaseTop, normal, baseTopNormal, normal);
@@ -243,41 +267,74 @@ float intersectAll(vec3 rayOrigin, vec3 rayDir, out vec3 normal) {
     t = merge(t, rod2, normal, rod2Normal, normal);
     t = merge(t, tSphereJoint3, normal, sphereJoint3Normal, normal);
     t = merge(t, tLampShade, normal, lampShadeNormal, normal);
+
+    movingLightPos = vec3(0, 0.2, 0);
+    movingLightPos += quatRot(quatInv(q), vec3(0,3,0));
+
+    movingLightPos += vec3(0, 0.3, 0);
     return t;
 }
 
 void main() {
-    float time = frame / 60.0;
+    float time = frame / 100.0;
     vec3 lightPos = vec3(10,15,10);
+    //vec3 lightPos = vec3(0,0,0);
+
+    //vec3 lightPos2 = vec3(-10,15,-10);
     
+
     float fov = PI / 2;
     
-    vec3 rayOrigin = vec3(0, 8, 4); //~ cam pos
+    vec3 rayOrigin = vec3(0, 6, 5); //~ cam pos
     vec3 rayDir = normalize(vec3(texCoord * 2 - 1, -tan(fov / 2.0)));
     rayDir = (vec4(rayDir, 0) * camDirMat).xyz;
 
     vec3 normal;
     float t = intersectAll(rayOrigin, rayDir, normal);
     
+    vec3 lightPos2 = movingLightPos;
+
     if (dot(normal, rayDir) > 0.0) {
         normal *= -1;
     }
     
     vec3 hitPos = rayOrigin + rayDir * t;
+    
     vec3 toLight = lightPos - hitPos;
+    vec3 toLight2 = lightPos2 - hitPos;
+
     float distToLight = length(toLight);
+    float distToLight2 = length(toLight2);
+    
     toLight /= distToLight;
+    toLight2 /= distToLight2;
+    
     if (t > 0.0) {
         float cosTheta = max(dot(toLight, normal), 0.0);
+        float cosTheta2 = max(dot(toLight2, normal), 0.0);
+        
         vec3 _;
+        vec3 _2;
+
         const float epsilon = 0.0001;
+        
         float lightT = intersectAll(hitPos + normal * epsilon, toLight, _);
+        float lightT2 = intersectAll(hitPos + normal * epsilon, toLight2, _2);
+
         float lightIntensity = 100.0;
+        float lightIntensity2 = 50.0;
+
         if (lightT > 0.0) {
             lightIntensity = 0.0;
         }
         
-        fragColor = vec4(vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta / pow(distToLight, 2.0) * lightIntensity, 1);
+        if (lightT2 > 0.0) {
+            lightIntensity2 = 0.0;
+        }
+
+        
+        fragColor = vec4(vec3(50 / 255.0, 48 / 255.0, 40 / 255.0), 1)
+        + vec4(vec3(253 / 255.0, 243 / 255.0, 198 / 255.0) * cosTheta / pow(distToLight, 2.0) * lightIntensity, 1) + vec4(vec3(253 / 255.0, 100 / 255.0, 100 / 255.0) * cosTheta2 / pow(distToLight2, 2.0) * lightIntensity2, 1);
     } else {
         fragColor = vec4(0 / 255.0, 0 / 255.0, 0 / 255.0, 1);
     }
