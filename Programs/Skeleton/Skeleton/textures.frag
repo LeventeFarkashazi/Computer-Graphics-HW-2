@@ -345,7 +345,7 @@ void main() {
         Hit lightHit1 = intersectAll(ray1);
         Hit lightHit2 = intersectAll(ray2);
 
-        float lightIntensity1 = 10.0;
+        float lightIntensity1 = 50.0;
         float lightIntensity2 = 40.0;
 
         if (lightHit1.t > 0.0 && lightHit1.t < lightDistance1) {
